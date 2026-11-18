@@ -1,0 +1,7 @@
+# Copie este arquivo para db.properties e preencha com os dados do seu banco.
+# O db.properties não é enviado ao Git.
+usuario=sa
+senha=SUA_SENHA_AQUI
+host=localhost
+porta=1433
+banco=aula_bd

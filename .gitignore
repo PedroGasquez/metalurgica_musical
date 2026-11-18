@@ -1,0 +1,15 @@
+# Build
+target/
+bin/
+
+# IDE
+.settings/
+.classpath
+.project
+.vscode/
+.idea/
+*.iml
+.github/modernize/
+
+# Configuração local com senha
+db.properties
