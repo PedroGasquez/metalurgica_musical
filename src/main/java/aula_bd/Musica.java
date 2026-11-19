@@ -5,8 +5,8 @@ public class Musica {
 	private String nome;
 	private String genero;
 	private String autor;
-	// Preenchidos apenas para músicas importadas do SoundCloud
-	private Long soundcloudId;
+	// Preenchidos apenas para músicas importadas do Deezer
+	private Long deezerId;
 	private String link;
 
 	public Musica() {
@@ -49,12 +49,12 @@ public class Musica {
 		this.autor = autor;
 	}
 
-	public Long getSoundcloudId() {
-		return soundcloudId;
+	public Long getDeezerId() {
+		return deezerId;
 	}
 
-	public void setSoundcloudId(Long soundcloudId) {
-		this.soundcloudId = soundcloudId;
+	public void setDeezerId(Long deezerId) {
+		this.deezerId = deezerId;
 	}
 
 	public String getLink() {
@@ -68,7 +68,7 @@ public class Musica {
 	@Override
 	public String toString() {
 		return "Musica [codigo=" + codigo + ", nome=" + nome + ", genero=" + genero + ", autor=" + autor
-				+ ", soundcloudId=" + soundcloudId + ", link=" + link + "]";
+				+ ", deezerId=" + deezerId + ", link=" + link + "]";
 	}
 
 

@@ -37,8 +37,8 @@ public class TelaPrincipal extends JFrame {
     static final String FONTE = "Segoe UI";
 
     private final MusicaDao dao = new MusicaDao();
-    private final SoundCloudApi soundCloud = new SoundCloudApi();
-    private final Reprodutor reprodutor = new Reprodutor(soundCloud);
+    private final DeezerApi deezer = new DeezerApi();
+    private final Reprodutor reprodutor = new Reprodutor(deezer);
     private final Map<Integer, Musica> musicas = new HashMap<>();
     private final DefaultTableModel modelo = new DefaultTableModel(
             new Object[] { "Código", "Nome", "Gênero", "Autor" }, 0) {
@@ -61,13 +61,13 @@ public class TelaPrincipal extends JFrame {
     private final Botao btnLimpar = new Botao("Limpar", CAMPO, BORDA, TEXTO, false);
     private final Botao btnExcluir = new Botao("Excluir", PERIGO, PERIGO, PERIGO, true);
     private final Botao btnTocar = new Botao(TEXTO_TOCAR, CAMPO, BORDA, TEXTO, false);
-    private final Botao btnSoundCloud = new Botao("Buscar no SoundCloud", DESTAQUE, DESTAQUE_H, Color.WHITE, false);
+    private final Botao btnDeezer = new Botao("Buscar no Deezer", DESTAQUE, DESTAQUE_H, Color.WHITE, false);
 
-    static final String TEXTO_TOCAR = "Tocar no SoundCloud";
+    static final String TEXTO_TOCAR = "Ouvir prévia (Deezer)";
     static final String TEXTO_PARAR = "Parar";
 
     private Integer codigoSelecionado = null;
-    private TelaSoundCloud telaSoundCloud;
+    private TelaDeezer telaDeezer;
 
     public TelaPrincipal() {
         super("Biblioteca Musical");
@@ -105,8 +105,8 @@ public class TelaPrincipal extends JFrame {
         JPanel direita = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 8));
         direita.setOpaque(false);
         direita.add(pilConexao);
-        btnSoundCloud.setPreferredSize(new Dimension(200, 40));
-        direita.add(btnSoundCloud);
+        btnDeezer.setPreferredSize(new Dimension(200, 40));
+        direita.add(btnDeezer);
 
         p.add(titulos, BorderLayout.WEST);
         p.add(direita, BorderLayout.EAST);
@@ -228,7 +228,7 @@ public class TelaPrincipal extends JFrame {
         btnLimpar.addActionListener(e -> limparFormulario());
         btnExcluir.addActionListener(e -> excluir());
         btnTocar.addActionListener(e -> tocarOuParar());
-        btnSoundCloud.addActionListener(e -> abrirSoundCloud());
+        btnDeezer.addActionListener(e -> abrirDeezer());
         reprodutor.aoMudar(this::reprodutorMudou);
 
         ActionListener enter = e -> salvar();
@@ -288,10 +288,10 @@ public class TelaPrincipal extends JFrame {
                 dao.inserir(m);
             } else {
                 m.setCodigo(codigo);
-                // Mantém o vínculo com o SoundCloud ao editar
+                // Mantém o vínculo com o Deezer ao editar
                 Musica atual = musicas.get(codigo);
                 if (atual != null) {
-                    m.setSoundcloudId(atual.getSoundcloudId());
+                    m.setDeezerId(atual.getDeezerId());
                     m.setLink(atual.getLink());
                 }
                 dao.atualizar(m);
@@ -349,14 +349,14 @@ public class TelaPrincipal extends JFrame {
         txtNome.requestFocusInWindow();
     }
 
-    // ---------- SoundCloud ----------
+    // ---------- Deezer ----------
 
-    private void abrirSoundCloud() {
-        if (telaSoundCloud == null) {
-            telaSoundCloud = new TelaSoundCloud(this, soundCloud, reprodutor, this::recarregar);
+    private void abrirDeezer() {
+        if (telaDeezer == null) {
+            telaDeezer = new TelaDeezer(this, deezer, reprodutor, this::recarregar);
         }
-        telaSoundCloud.setVisible(true);
-        telaSoundCloud.toFront();
+        telaDeezer.setVisible(true);
+        telaDeezer.toFront();
     }
 
     private void tocarOuParar() {
@@ -365,8 +365,8 @@ public class TelaPrincipal extends JFrame {
             return;
         }
         Musica m = musicaSelecionada();
-        if (m == null || m.getSoundcloudId() == null) return;
-        reprodutor.tocar(m.getSoundcloudId(), m.getNome(), msg -> status(msg, PERIGO));
+        if (m == null || m.getDeezerId() == null) return;
+        reprodutor.tocar(m.getDeezerId(), m.getNome(), msg -> status(msg, PERIGO));
     }
 
     private void reprodutorMudou() {
@@ -382,7 +382,7 @@ public class TelaPrincipal extends JFrame {
         }
         Musica m = musicaSelecionada();
         btnTocar.setText(TEXTO_TOCAR);
-        btnTocar.setEnabled(m != null && m.getSoundcloudId() != null);
+        btnTocar.setEnabled(m != null && m.getDeezerId() != null);
     }
 
     private Musica musicaSelecionada() {

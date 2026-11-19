@@ -12,7 +12,7 @@ public class MusicaDao {
 
 	public void inserir (Musica musica){
         //1: Definir o comando SQL
-        String sql = "INSERT INTO tb_musica(nome, genero, autor, soundcloud_id, link) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO tb_musica(nome, genero, autor, deezer_id, link) VALUES (?, ?, ?, ?, ?)";
         //2: Abrir uma conexão
         ConnectionFactory factory = new ConnectionFactory();
         try (Connection c = factory.obtemConexao()){
@@ -22,7 +22,7 @@ public class MusicaDao {
             ps.setString(1, musica.getNome());
             ps.setString(2, musica.getGenero());
             ps.setString(3, musica.getAutor());
-            ps.setObject(4, musica.getSoundcloudId(), Types.BIGINT);
+            ps.setObject(4, musica.getDeezerId(), Types.BIGINT);
             ps.setString(5, musica.getLink());
             //5: Executa o comando
             ps.execute();
@@ -34,7 +34,7 @@ public class MusicaDao {
 
 	public void atualizar (Musica musica){
         //1: Definir o comando SQL
-        String sql = "UPDATE tb_musica SET nome = ?, genero = ?, autor = ?, soundcloud_id = ?, link = ? WHERE codigo = ?";
+        String sql = "UPDATE tb_musica SET nome = ?, genero = ?, autor = ?, deezer_id = ?, link = ? WHERE codigo = ?";
         //2: Abrir uma conexão
         ConnectionFactory factory = new ConnectionFactory();
         try (Connection c = factory.obtemConexao()){
@@ -44,7 +44,7 @@ public class MusicaDao {
             ps.setString(1, musica.getNome());
             ps.setString(2, musica.getGenero());
             ps.setString(3, musica.getAutor());
-            ps.setObject(4, musica.getSoundcloudId(), Types.BIGINT);
+            ps.setObject(4, musica.getDeezerId(), Types.BIGINT);
             ps.setString(5, musica.getLink());
             ps.setInt(6, musica.getCodigo());
             //5: Executa o comando
@@ -124,8 +124,8 @@ public class MusicaDao {
 	private Musica lerMusica(ResultSet rs) throws SQLException {
         Musica m = new Musica(rs.getString("nome"), rs.getString("genero"), rs.getString("autor"));
         m.setCodigo(rs.getInt("codigo"));
-        long soundcloudId = rs.getLong("soundcloud_id");
-        m.setSoundcloudId(rs.wasNull() ? null : soundcloudId);
+        long deezerId = rs.getLong("deezer_id");
+        m.setDeezerId(rs.wasNull() ? null : deezerId);
         m.setLink(rs.getString("link"));
         return m;
 	}

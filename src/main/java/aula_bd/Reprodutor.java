@@ -13,7 +13,7 @@ import javafx.scene.media.MediaException;
 import javafx.scene.media.MediaPlayer;
 
 /**
- * Toca faixas do SoundCloud usando o JavaFX Media, que entende MP3 e HLS (m3u8).
+ * Toca as prévias de 30 segundos do Deezer (MP3) usando o JavaFX Media.
  * O áudio é apenas transmitido: nada é gravado em disco.
  *
  * Os ouvintes registrados em {@link #aoMudar(Runnable)} são chamados na thread do Swing.
@@ -24,7 +24,7 @@ public class Reprodutor {
 
     private static boolean javaFxIniciado;
 
-    private final SoundCloudApi api;
+    private final DeezerApi api;
     private final List<Runnable> ouvintes = new CopyOnWriteArrayList<>();
     // Cada pedido de tocar recebe um número; respostas de pedidos antigos são ignoradas
     private final AtomicLong pedidoAtual = new AtomicLong();
@@ -33,7 +33,7 @@ public class Reprodutor {
     private volatile String titulo;
     private MediaPlayer player; // acessado só na thread do JavaFX
 
-    public Reprodutor(SoundCloudApi api) {
+    public Reprodutor(DeezerApi api) {
         this.api = api;
     }
 
@@ -52,7 +52,7 @@ public class Reprodutor {
     public String descricao() {
         return switch (estado) {
             case CARREGANDO -> "Carregando \"" + titulo + "\"...";
-            case TOCANDO -> "Tocando \"" + titulo + "\"  ·  via SoundCloud";
+            case TOCANDO -> "Tocando \"" + titulo + "\"  ·  prévia do Deezer";
             case PARADO -> "Reprodução parada.";
         };
     }
@@ -63,7 +63,7 @@ public class Reprodutor {
         mudar(Estado.CARREGANDO, titulo);
         Thread.ofVirtual().start(() -> {
             try {
-                String url = api.urlDeStream(idFaixa);
+                String url = api.urlDaPrevia(idFaixa);
                 iniciarJavaFx();
                 Platform.runLater(() -> iniciarPlayer(pedido, url, titulo, aoErro));
             } catch (Exception e) {

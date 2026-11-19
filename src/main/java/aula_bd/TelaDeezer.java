@@ -15,30 +15,30 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 
-/** Janela para buscar músicas no SoundCloud, ouvir e adicionar ao acervo. */
-public class TelaSoundCloud extends JDialog {
+/** Janela para buscar músicas no Deezer, ouvir a prévia e adicionar ao acervo. */
+public class TelaDeezer extends JDialog {
 
-    private final SoundCloudApi api;
+    private final DeezerApi api;
     private final Reprodutor reprodutor;
     private final Runnable aoAdicionar;
     private final MusicaDao dao = new MusicaDao();
 
-    private final List<FaixaSoundCloud> faixas = new ArrayList<>();
+    private final List<FaixaDeezer> faixas = new ArrayList<>();
     private final DefaultTableModel modelo = new DefaultTableModel(
-            new Object[] { "Título", "Artista", "Gênero", "Duração" }, 0) {
+            new Object[] { "Título", "Artista", "Álbum", "Duração" }, 0) {
         @Override public boolean isCellEditable(int l, int c) { return false; }
     };
     private final JTable tabela = new JTable(modelo);
 
-    private final CampoTexto txtBusca = new CampoTexto("Buscar músicas ou artistas no SoundCloud...");
+    private final CampoTexto txtBusca = new CampoTexto("Buscar músicas ou artistas no Deezer...");
     private final Botao btnBuscar = new Botao("Buscar", DESTAQUE, DESTAQUE_H, Color.WHITE, false);
-    private final Botao btnTocar = new Botao("Tocar", DESTAQUE, DESTAQUE_H, Color.WHITE, false);
+    private final Botao btnTocar = new Botao("Ouvir prévia", DESTAQUE, DESTAQUE_H, Color.WHITE, false);
     private final Botao btnAdicionar = new Botao("Adicionar ao acervo", CAMPO, BORDA, TEXTO, false);
-    private final Botao btnAbrir = new Botao("Abrir no SoundCloud", CAMPO, BORDA, TEXTO, false);
+    private final Botao btnAbrir = new Botao("Abrir no Deezer", CAMPO, BORDA, TEXTO, false);
     private final JLabel lblStatus = rotulo(" ", 12, Font.PLAIN, SUAVE);
 
-    public TelaSoundCloud(Frame dono, SoundCloudApi api, Reprodutor reprodutor, Runnable aoAdicionar) {
-        super(dono, "SoundCloud", false);
+    public TelaDeezer(Frame dono, DeezerApi api, Reprodutor reprodutor, Runnable aoAdicionar) {
+        super(dono, "Deezer", false);
         this.api = api;
         this.reprodutor = reprodutor;
         this.aoAdicionar = aoAdicionar;
@@ -57,11 +57,7 @@ public class TelaSoundCloud extends JDialog {
 
         configurarAcoes();
         atualizarBotoes();
-        if (!api.isConfigurada()) {
-            status("Configure SOUNDCLOUD_CLIENT_ID e SOUNDCLOUD_CLIENT_SECRET (veja soundcloud.properties.example).", PERIGO);
-        } else {
-            status("Digite um termo e pressione Enter. Clique duas vezes numa música para tocar.", SUAVE);
-        }
+        status("Digite um termo e pressione Enter. Clique duas vezes numa música para ouvir a prévia.", SUAVE);
     }
 
     // ---------- Montagem da tela ----------
@@ -71,8 +67,8 @@ public class TelaSoundCloud extends JDialog {
         p.setOpaque(false);
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
 
-        JLabel titulo = rotulo("SoundCloud", 26, Font.BOLD, TEXTO);
-        JLabel subtitulo = rotulo("Busque e ouça músicas públicas. O áudio é transmitido, nada é baixado.", 13, Font.PLAIN, SUAVE);
+        JLabel titulo = rotulo("Deezer", 26, Font.BOLD, TEXTO);
+        JLabel subtitulo = rotulo("Busque músicas e ouça prévias de 30 segundos.", 13, Font.PLAIN, SUAVE);
         titulo.setAlignmentX(LEFT_ALIGNMENT);
         subtitulo.setAlignmentX(LEFT_ALIGNMENT);
         p.add(titulo);
@@ -98,8 +94,8 @@ public class TelaSoundCloud extends JDialog {
 
         estilizarTabela(tabela, false);
         TableColumn duracao = tabela.getColumnModel().getColumn(3);
-        duracao.setPreferredWidth(120);
-        duracao.setMaxWidth(160);
+        duracao.setPreferredWidth(90);
+        duracao.setMaxWidth(110);
 
         card.add(rolagem(tabela), BorderLayout.CENTER);
         return card;
@@ -111,9 +107,9 @@ public class TelaSoundCloud extends JDialog {
 
         JPanel botoes = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         botoes.setOpaque(false);
-        btnAbrir.setPreferredSize(new Dimension(190, 44));
+        btnAbrir.setPreferredSize(new Dimension(170, 44));
         btnAdicionar.setPreferredSize(new Dimension(190, 44));
-        btnTocar.setPreferredSize(new Dimension(130, 44));
+        btnTocar.setPreferredSize(new Dimension(150, 44));
         botoes.add(btnAbrir);
         botoes.add(btnAdicionar);
         botoes.add(btnTocar);
@@ -158,19 +154,18 @@ public class TelaSoundCloud extends JDialog {
             return;
         }
         btnBuscar.setEnabled(false);
-        status("Buscando \"" + termo + "\" no SoundCloud...", SUAVE);
+        status("Buscando \"" + termo + "\" no Deezer...", SUAVE);
         emSegundoPlano(() -> api.buscar(termo), lista -> {
             btnBuscar.setEnabled(true);
             faixas.clear();
             faixas.addAll(lista);
             modelo.setRowCount(0);
-            for (FaixaSoundCloud f : lista) {
-                String duracao = f.duracaoFormatada() + (f.previa() ? "  · prévia" : "");
-                modelo.addRow(new Object[] { f.titulo(), f.artista(), f.genero(), duracao });
+            for (FaixaDeezer f : lista) {
+                modelo.addRow(new Object[] { f.titulo(), f.artista(), f.album(), f.duracaoFormatada() });
             }
             atualizarBotoes();
             status(lista.isEmpty() ? "Nenhuma música encontrada para \"" + termo + "\"."
-                    : lista.size() + " músicas encontradas. Clique duas vezes para tocar.", SUAVE);
+                    : lista.size() + " músicas encontradas. Clique duas vezes para ouvir a prévia.", SUAVE);
         }, msg -> {
             btnBuscar.setEnabled(true);
             status(msg, PERIGO);
@@ -186,20 +181,31 @@ public class TelaSoundCloud extends JDialog {
     }
 
     private void tocarSelecionada() {
-        FaixaSoundCloud f = faixaSelecionada();
+        FaixaDeezer f = faixaSelecionada();
         if (f == null) return;
         reprodutor.tocar(f.id(), f.titulo() + " — " + f.artista(), msg -> status(msg, PERIGO));
     }
 
     private void adicionarAoAcervo() {
-        FaixaSoundCloud f = faixaSelecionada();
+        FaixaDeezer f = faixaSelecionada();
         if (f == null) return;
-        // Respeita o tamanho das colunas de tb_musica
-        Musica m = new Musica(limitar(f.titulo(), 100), limitar(f.genero(), 50), limitar(f.artista(), 100));
-        m.setSoundcloudId(f.id());
-        m.setLink(limitar(f.link(), 500));
         btnAdicionar.setEnabled(false);
-        emSegundoPlano(() -> { dao.inserir(m); return Boolean.TRUE; }, ok -> {
+        status("Adicionando \"" + f.titulo() + "\"...", SUAVE);
+        emSegundoPlano(() -> {
+            // A busca não traz o gênero; ele vem do álbum. Se falhar, salva sem gênero.
+            String genero;
+            try {
+                genero = api.generoDoAlbum(f.idAlbum());
+            } catch (DeezerException e) {
+                genero = "";
+            }
+            // Respeita o tamanho das colunas de tb_musica
+            Musica m = new Musica(limitar(f.titulo(), 100), limitar(genero, 50), limitar(f.artista(), 100));
+            m.setDeezerId(f.id());
+            m.setLink(limitar(f.link(), 500));
+            dao.inserir(m);
+            return Boolean.TRUE;
+        }, ok -> {
             atualizarBotoes();
             status("\"" + f.titulo() + "\" adicionada ao acervo.", SUCESSO);
             aoAdicionar.run();
@@ -210,7 +216,7 @@ public class TelaSoundCloud extends JDialog {
     }
 
     private void abrirNoNavegador() {
-        FaixaSoundCloud f = faixaSelecionada();
+        FaixaDeezer f = faixaSelecionada();
         if (f == null || f.link().isEmpty()) return;
         try {
             Desktop.getDesktop().browse(URI.create(f.link()));
@@ -222,13 +228,13 @@ public class TelaSoundCloud extends JDialog {
     private void atualizarBotoes() {
         boolean selecionada = faixaSelecionada() != null;
         boolean tocando = reprodutor.getEstado() != Reprodutor.Estado.PARADO;
-        btnTocar.setText(tocando ? TEXTO_PARAR : "Tocar");
+        btnTocar.setText(tocando ? TEXTO_PARAR : "Ouvir prévia");
         btnTocar.setEnabled(tocando || selecionada);
         btnAdicionar.setEnabled(selecionada);
         btnAbrir.setEnabled(selecionada);
     }
 
-    private FaixaSoundCloud faixaSelecionada() {
+    private FaixaDeezer faixaSelecionada() {
         int linha = tabela.getSelectedRow();
         return linha < 0 || linha >= faixas.size() ? null : faixas.get(linha);
     }
