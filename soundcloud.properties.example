@@ -1,0 +1,5 @@
+# Copie este arquivo para soundcloud.properties e preencha com as credenciais do seu app.
+# Crie o app em https://soundcloud.com/you/apps
+# O soundcloud.properties não é enviado ao Git.
+client_id=SEU_CLIENT_ID
+client_secret=SEU_CLIENT_SECRET

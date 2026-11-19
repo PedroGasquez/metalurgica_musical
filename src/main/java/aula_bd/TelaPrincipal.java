@@ -4,6 +4,9 @@ import java.awt.*;
 import java.awt.event.*;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -34,6 +37,9 @@ public class TelaPrincipal extends JFrame {
     static final String FONTE = "Segoe UI";
 
     private final MusicaDao dao = new MusicaDao();
+    private final SoundCloudApi soundCloud = new SoundCloudApi();
+    private final Reprodutor reprodutor = new Reprodutor(soundCloud);
+    private final Map<Integer, Musica> musicas = new HashMap<>();
     private final DefaultTableModel modelo = new DefaultTableModel(
             new Object[] { "Código", "Nome", "Gênero", "Autor" }, 0) {
         @Override public boolean isCellEditable(int l, int c) { return false; }
@@ -54,8 +60,14 @@ public class TelaPrincipal extends JFrame {
     private final Botao btnSalvar = new Botao("Salvar", DESTAQUE, DESTAQUE_H, Color.WHITE, false);
     private final Botao btnLimpar = new Botao("Limpar", CAMPO, BORDA, TEXTO, false);
     private final Botao btnExcluir = new Botao("Excluir", PERIGO, PERIGO, PERIGO, true);
+    private final Botao btnTocar = new Botao(TEXTO_TOCAR, CAMPO, BORDA, TEXTO, false);
+    private final Botao btnSoundCloud = new Botao("Buscar no SoundCloud", DESTAQUE, DESTAQUE_H, Color.WHITE, false);
+
+    static final String TEXTO_TOCAR = "Tocar no SoundCloud";
+    static final String TEXTO_PARAR = "Parar";
 
     private Integer codigoSelecionado = null;
+    private TelaSoundCloud telaSoundCloud;
 
     public TelaPrincipal() {
         super("Biblioteca Musical");
@@ -90,9 +102,11 @@ public class TelaPrincipal extends JFrame {
         titulos.add(Box.createVerticalStrut(2));
         titulos.add(rotulo("Gerencie seu acervo de músicas", 13, Font.PLAIN, SUAVE));
 
-        JPanel direita = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 12));
+        JPanel direita = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 8));
         direita.setOpaque(false);
         direita.add(pilConexao);
+        btnSoundCloud.setPreferredSize(new Dimension(200, 40));
+        direita.add(btnSoundCloud);
 
         p.add(titulos, BorderLayout.WEST);
         p.add(direita, BorderLayout.EAST);
@@ -128,9 +142,15 @@ public class TelaPrincipal extends JFrame {
         linha.add(btnLimpar);
         linha.add(btnExcluir);
         card.add(linha);
+        card.add(Box.createVerticalStrut(10));
+
+        btnTocar.setAlignmentX(LEFT_ALIGNMENT);
+        btnTocar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+        card.add(btnTocar);
         card.add(Box.createVerticalGlue());
 
         btnExcluir.setEnabled(false);
+        btnTocar.setEnabled(false);
         return card;
     }
 
@@ -153,23 +173,19 @@ public class TelaPrincipal extends JFrame {
         busca.add(txtBusca);
         topo.add(busca, BorderLayout.EAST);
 
-        configurarTabela();
-        JScrollPane rolagem = new JScrollPane(tabela);
-        rolagem.setBorder(BorderFactory.createEmptyBorder());
-        rolagem.getViewport().setBackground(SUPERFICIE);
-        rolagem.setBackground(SUPERFICIE);
-        rolagem.getVerticalScrollBar().setUI(new BarraFina());
-        rolagem.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
-        rolagem.getVerticalScrollBar().setOpaque(false);
-        rolagem.setCorner(JScrollPane.UPPER_RIGHT_CORNER, cantoCabecalho());
+        tabela.setRowSorter(ordenador);
+        estilizarTabela(tabela, true);
+        TableColumn col = tabela.getColumnModel().getColumn(0);
+        col.setPreferredWidth(80);
+        col.setMaxWidth(100);
 
         card.add(topo, BorderLayout.NORTH);
-        card.add(rolagem, BorderLayout.CENTER);
+        card.add(rolagem(tabela), BorderLayout.CENTER);
         return card;
     }
 
-    private void configurarTabela() {
-        tabela.setRowSorter(ordenador);
+    /** Aplica o visual padrão. Com {@code temCodigo}, a primeira coluna é o código (#1, #2...). */
+    static void estilizarTabela(JTable tabela, boolean temCodigo) {
         tabela.setRowHeight(40);
         tabela.setShowGrid(false);
         tabela.setIntercellSpacing(new Dimension(0, 0));
@@ -183,21 +199,26 @@ public class TelaPrincipal extends JFrame {
         JTableHeader cab = tabela.getTableHeader();
         cab.setReorderingAllowed(false);
         cab.setPreferredSize(new Dimension(0, 40));
-        cab.setDefaultRenderer(new RenderizadorCabecalho());
+        cab.setDefaultRenderer(new RenderizadorCabecalho(temCodigo));
 
-        RenderizadorCelula r = new RenderizadorCelula();
+        RenderizadorCelula r = new RenderizadorCelula(temCodigo);
         for (int i = 0; i < tabela.getColumnCount(); i++) {
             tabela.getColumnModel().getColumn(i).setCellRenderer(r);
         }
-        TableColumn col = tabela.getColumnModel().getColumn(0);
-        col.setPreferredWidth(80);
-        col.setMaxWidth(100);
     }
 
-    private JComponent cantoCabecalho() {
-        JPanel p = new JPanel();
-        p.setBackground(CAMPO);
-        return p;
+    static JScrollPane rolagem(JTable tabela) {
+        JScrollPane rolagem = new JScrollPane(tabela);
+        rolagem.setBorder(BorderFactory.createEmptyBorder());
+        rolagem.getViewport().setBackground(SUPERFICIE);
+        rolagem.setBackground(SUPERFICIE);
+        rolagem.getVerticalScrollBar().setUI(new BarraFina());
+        rolagem.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
+        rolagem.getVerticalScrollBar().setOpaque(false);
+        JPanel canto = new JPanel();
+        canto.setBackground(CAMPO);
+        rolagem.setCorner(JScrollPane.UPPER_RIGHT_CORNER, canto);
+        return rolagem;
     }
 
     // ---------- Comportamento ----------
@@ -206,6 +227,9 @@ public class TelaPrincipal extends JFrame {
         btnSalvar.addActionListener(e -> salvar());
         btnLimpar.addActionListener(e -> limparFormulario());
         btnExcluir.addActionListener(e -> excluir());
+        btnTocar.addActionListener(e -> tocarOuParar());
+        btnSoundCloud.addActionListener(e -> abrirSoundCloud());
+        reprodutor.aoMudar(this::reprodutorMudou);
 
         ActionListener enter = e -> salvar();
         txtNome.addActionListener(enter);
@@ -240,7 +264,9 @@ public class TelaPrincipal extends JFrame {
             }
             pilConexao.definir("SQL Server conectado", SUCESSO);
             modelo.setRowCount(0);
+            musicas.clear();
             for (Musica m : lista) {
+                musicas.put(m.getCodigo(), m);
                 modelo.addRow(new Object[] { m.getCodigo(), m.getNome(), m.getGenero(), m.getAutor() });
             }
             atualizarTotal();
@@ -262,6 +288,12 @@ public class TelaPrincipal extends JFrame {
                 dao.inserir(m);
             } else {
                 m.setCodigo(codigo);
+                // Mantém o vínculo com o SoundCloud ao editar
+                Musica atual = musicas.get(codigo);
+                if (atual != null) {
+                    m.setSoundcloudId(atual.getSoundcloudId());
+                    m.setLink(atual.getLink());
+                }
                 dao.atualizar(m);
             }
             return Boolean.TRUE;
@@ -300,6 +332,7 @@ public class TelaPrincipal extends JFrame {
         lblDica.setText("Altere os dados e clique em Atualizar  ·  Esc cancela");
         btnSalvar.setText("Atualizar");
         btnExcluir.setEnabled(true);
+        atualizarBotaoTocar();
     }
 
     private void limparFormulario() {
@@ -312,7 +345,48 @@ public class TelaPrincipal extends JFrame {
         lblDica.setText("Preencha os dados e clique em Salvar");
         btnSalvar.setText("Salvar");
         btnExcluir.setEnabled(false);
+        atualizarBotaoTocar();
         txtNome.requestFocusInWindow();
+    }
+
+    // ---------- SoundCloud ----------
+
+    private void abrirSoundCloud() {
+        if (telaSoundCloud == null) {
+            telaSoundCloud = new TelaSoundCloud(this, soundCloud, reprodutor, this::recarregar);
+        }
+        telaSoundCloud.setVisible(true);
+        telaSoundCloud.toFront();
+    }
+
+    private void tocarOuParar() {
+        if (reprodutor.getEstado() != Reprodutor.Estado.PARADO) {
+            reprodutor.parar();
+            return;
+        }
+        Musica m = musicaSelecionada();
+        if (m == null || m.getSoundcloudId() == null) return;
+        reprodutor.tocar(m.getSoundcloudId(), m.getNome(), msg -> status(msg, PERIGO));
+    }
+
+    private void reprodutorMudou() {
+        atualizarBotaoTocar();
+        status(reprodutor.descricao(), reprodutor.getEstado() == Reprodutor.Estado.TOCANDO ? SUCESSO : SUAVE);
+    }
+
+    private void atualizarBotaoTocar() {
+        if (reprodutor.getEstado() != Reprodutor.Estado.PARADO) {
+            btnTocar.setText(TEXTO_PARAR);
+            btnTocar.setEnabled(true);
+            return;
+        }
+        Musica m = musicaSelecionada();
+        btnTocar.setText(TEXTO_TOCAR);
+        btnTocar.setEnabled(m != null && m.getSoundcloudId() != null);
+    }
+
+    private Musica musicaSelecionada() {
+        return codigoSelecionado == null ? null : musicas.get(codigoSelecionado);
     }
 
     private void filtrar() {
@@ -334,14 +408,23 @@ public class TelaPrincipal extends JFrame {
     }
 
     private <T> void emSegundoPlano(Supplier<T> tarefa, Consumer<T> aoTerminar) {
+        emSegundoPlano(tarefa, aoTerminar, msg -> {
+            btnSalvar.setEnabled(true);
+            status("Erro: " + msg, PERIGO);
+        });
+    }
+
+    /** Executa {@code tarefa} fora da thread do Swing e entrega o resultado (ou a mensagem de erro) nela. */
+    static <T> void emSegundoPlano(Supplier<T> tarefa, Consumer<T> aoTerminar, Consumer<String> aoFalhar) {
         new SwingWorker<T, Void>() {
             @Override protected T doInBackground() { return tarefa.get(); }
             @Override protected void done() {
                 try {
                     aoTerminar.accept(get());
+                } catch (ExecutionException e) {
+                    aoFalhar.accept(e.getCause().getMessage());
                 } catch (Exception e) {
-                    btnSalvar.setEnabled(true);
-                    status("Erro: " + e.getMessage(), PERIGO);
+                    aoFalhar.accept(e.getMessage());
                 }
             }
         }.execute();
@@ -516,6 +599,8 @@ public class TelaPrincipal extends JFrame {
     }
 
     static class RenderizadorCabecalho extends DefaultTableCellRenderer {
+        private final boolean temCodigo;
+        RenderizadorCabecalho(boolean temCodigo) { this.temCodigo = temCodigo; }
         @Override public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int l, int c) {
             JLabel lbl = (JLabel) super.getTableCellRendererComponent(t, v, s, f, l, c);
             lbl.setText(v == null ? "" : v.toString().toUpperCase());
@@ -523,26 +608,29 @@ public class TelaPrincipal extends JFrame {
             lbl.setForeground(SUAVE);
             lbl.setBackground(CAMPO);
             lbl.setOpaque(true);
-            lbl.setHorizontalAlignment(c == 0 ? CENTER : LEFT);
+            lbl.setHorizontalAlignment(temCodigo && c == 0 ? CENTER : LEFT);
             lbl.setBorder(new EmptyBorder(0, 14, 0, 14));
             return lbl;
         }
     }
 
     static class RenderizadorCelula extends DefaultTableCellRenderer {
+        private final boolean temCodigo;
+        RenderizadorCelula(boolean temCodigo) { this.temCodigo = temCodigo; }
         @Override public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int l, int c) {
             JLabel lbl = (JLabel) super.getTableCellRendererComponent(t, v, s, false, l, c);
             lbl.setBorder(new EmptyBorder(0, 14, 0, 14));
             lbl.setBackground(s ? SELECAO : (l % 2 == 0 ? SUPERFICIE : LINHA_ALT));
-            if (c == 0) {
+            int principal = temCodigo ? 1 : 0;
+            if (temCodigo && c == 0) {
                 lbl.setText(v == null ? "" : "#" + v);
                 lbl.setForeground(SUAVE);
                 lbl.setHorizontalAlignment(CENTER);
                 lbl.setFont(new Font(FONTE, Font.PLAIN, 13));
             } else {
-                lbl.setForeground(c == 1 ? TEXTO : new Color(0xB8BECC));
+                lbl.setForeground(c == principal ? TEXTO : new Color(0xB8BECC));
                 lbl.setHorizontalAlignment(LEFT);
-                lbl.setFont(new Font(FONTE, c == 1 ? Font.BOLD : Font.PLAIN, 14));
+                lbl.setFont(new Font(FONTE, c == principal ? Font.BOLD : Font.PLAIN, 14));
             }
             return lbl;
         }

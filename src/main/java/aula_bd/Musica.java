@@ -5,18 +5,21 @@ public class Musica {
 	private String nome;
 	private String genero;
 	private String autor;
-	
+	// Preenchidos apenas para músicas importadas do SoundCloud
+	private Long soundcloudId;
+	private String link;
+
 	public Musica() {
 		super();
 	}
-	
+
 	public Musica(String nome, String genero, String autor) {
 		super();
 		this.nome = nome;
 		this.genero = genero;
 		this.autor = autor;
 	}
-	
+
 	public int getCodigo() {
 		return codigo;
 	}
@@ -46,11 +49,28 @@ public class Musica {
 		this.autor = autor;
 	}
 
+	public Long getSoundcloudId() {
+		return soundcloudId;
+	}
+
+	public void setSoundcloudId(Long soundcloudId) {
+		this.soundcloudId = soundcloudId;
+	}
+
+	public String getLink() {
+		return link;
+	}
+
+	public void setLink(String link) {
+		this.link = link;
+	}
+
 	@Override
 	public String toString() {
-		return "Musica [codigo=" + codigo + ", nome=" + nome + ", genero=" + genero + ", autor=" + autor + "]";
+		return "Musica [codigo=" + codigo + ", nome=" + nome + ", genero=" + genero + ", autor=" + autor
+				+ ", soundcloudId=" + soundcloudId + ", link=" + link + "]";
 	}
-	
-	
-	
+
+
+
 }

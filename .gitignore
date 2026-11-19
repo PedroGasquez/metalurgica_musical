@@ -13,3 +13,4 @@ bin/
 
 # Configuração local com senha
 db.properties
+soundcloud.properties
