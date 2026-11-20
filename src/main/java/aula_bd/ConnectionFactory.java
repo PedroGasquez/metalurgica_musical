@@ -1,7 +1,4 @@
 package aula_bd;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.Properties;
@@ -14,7 +11,7 @@ import java.util.Properties;
  */
 public class ConnectionFactory {
 
-    private static final Properties ARQUIVO = carregarArquivo();
+    private static final Properties ARQUIVO = Configuracao.carregar("db.properties");
 
     private String usuario = config("DB_USUARIO", "usuario", "sa");
     private String senha   = config("DB_SENHA",   "senha",   "");
@@ -40,21 +37,6 @@ public class ConnectionFactory {
     }
 
     private static String config(String variavel, String chave, String padrao) {
-        String v = System.getenv(variavel);
-        if (v != null && !v.isEmpty()) return v;
-        return ARQUIVO.getProperty(chave, padrao);
-    }
-
-    private static Properties carregarArquivo() {
-        Properties p = new Properties();
-        Path arquivo = Path.of("db.properties");
-        if (Files.exists(arquivo)) {
-            try (InputStream in = Files.newInputStream(arquivo)) {
-                p.load(in);
-            } catch (Exception e) {
-                System.err.println("Não foi possível ler db.properties: " + e.getMessage());
-            }
-        }
-        return p;
+        return Configuracao.ler(ARQUIVO, variavel, chave, padrao);
     }
 }
